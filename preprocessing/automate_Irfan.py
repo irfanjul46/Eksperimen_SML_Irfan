@@ -7,7 +7,7 @@ def load_data(file_path):
     """Memuat dataset mentah dari jalur file yang ditentukan."""
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di: {file_path}")
-    df = pd.read_csv(file_path, encoding='latin-1')
+    df = pd.read_csv(file_path, encoding='latin-1', delimiter=';')
     print("✓ Dataset berhasil dimuat.")
     return df
     
@@ -18,7 +18,7 @@ def preprocess_data(df):
     
     # 1. Menghapus duplikat dan memastikan kolom krusial ada (otomatis buat jika hilang)
     df_clean = df_clean.drop_duplicates()
-    required_cols = ['Overall', 'Potential', 'Age']
+    required_cols = ['Age']
     missing_required = [c for c in required_cols if c not in df_clean.columns]
     if missing_required:
         num_df = df_clean.select_dtypes(include=[np.number])
@@ -33,7 +33,7 @@ def preprocess_data(df):
     df_clean = df_clean.dropna(subset=required_cols)
     
     # 2. Penanganan Outlier Berbasis DataFrame (Vectorized IQR)
-    columns_to_filter = ['Overall', 'Potential', 'Age']
+    columns_to_filter = ['Age']
     for col in columns_to_filter:
         if col in df_clean.columns:
             Q1 = df_clean[col].quantile(0.25)
@@ -68,7 +68,7 @@ def main():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     input_path = os.path.join(base_dir, 'football_raw', 'football_player_stats.csv')
     output_dir = os.path.join(base_dir, 'preprocessing')
-    output_path = os.path.join(output_dir, 'football_cleaned.csv')
+    output_path = os.path.join(output_dir, 'football_preprocessing.csv')
     
     # Menjalankan Pipeline Preprocessing
     try:
