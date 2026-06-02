@@ -4,36 +4,29 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 def load_data(file_path):
-    """Memuat dataset mentah dari jalur file yang ditentukan."""
+    """Memuat dataset mentah dari jalur file yang ditentukan dengan delimiter tepat."""
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di: {file_path}")
-    df = pd.read_csv(file_path, encoding='latin-1', delimiter=';')
+    # Menggunakan sep=';' karena dataset sepak bola ini dipisahkan oleh titik koma
+    df = pd.read_csv(file_path, encoding='latin-1', sep=';')
     print("✓ Dataset berhasil dimuat.")
     return df
-    
 
 def preprocess_data(df):
-    """Melakukan pembersihan data, penanganan outlier, encoding, dan standarisasi."""
+    """Melakukan pembersihan data statistik sepak bola riil."""
     df_clean = df.copy()
     
-    # 1. Menghapus duplikat dan memastikan kolom krusial ada (otomatis buat jika hilang)
+    # 1. Standardisasi nama kolom menjadi huruf kecil semua (mencegah isu kapitalisasi)
+    df_clean.columns = df_clean.columns.str.lower()
+    
+    # Kolom krusial yang harus dibersihkan dan bebas dari nilai kosong
+    required_cols = ['age', 'goals', 'shots']
     df_clean = df_clean.drop_duplicates()
-    required_cols = ['Age']
-    missing_required = [c for c in required_cols if c not in df_clean.columns]
-    if missing_required:
-        num_df = df_clean.select_dtypes(include=[np.number])
-        if not num_df.empty:
-            global_median = num_df.median().median()
-        else:
-            global_median = 0
-        for col in missing_required:
-            df_clean[col] = global_median
-        print(f"⚠️ Kolom tidak ditemukan dan diisi otomatis: {missing_required} (nilai: {global_median})")
-    # Buang baris yang masih memiliki NA pada kolom yang dibutuhkan
     df_clean = df_clean.dropna(subset=required_cols)
     
     # 2. Penanganan Outlier Berbasis DataFrame (Vectorized IQR)
-    columns_to_filter = ['Age']
+    # Kita saring fitur-fitur utama agar performa model lebih stabil
+    columns_to_filter = ['age', 'goals', 'shots']
     for col in columns_to_filter:
         if col in df_clean.columns:
             Q1 = df_clean[col].quantile(0.25)
@@ -43,25 +36,26 @@ def preprocess_data(df):
             lower_limit = Q1 - (1.5 * IQR)
             upper_limit = Q3 + (1.5 * IQR)
             
-            # Filter langsung secara efisien
+            # Filter langsung secara efisien tanpa kolom flag pembantu
             df_clean = df_clean[(df_clean[col] >= lower_limit) & (df_clean[col] <= upper_limit)]
             
-    # 3. Transformasi Data Kategorikal (One-Hot Encoding)
-    if 'Preferred_Foot' in df_clean.columns:
-        df_clean = pd.get_dummies(df_clean, columns=['Preferred_Foot'], drop_first=True)
+    # 3. Transformasi Data Kategorikal (One-Hot Encoding untuk Posisi Pemain / 'pos')
+    if 'pos' in df_clean.columns:
+        df_clean = pd.get_dummies(df_clean, columns=['pos'], drop_first=True)
         
     # 4. Standarisasi Fitur Numerik
     scaler = StandardScaler()
     numeric_cols = df_clean.select_dtypes(include=[np.number]).columns
-    # Kecualikan kolom hasil encoding (0 atau 1) dari standarisasi
-    cols_to_scale = [c for c in numeric_cols if not c.startswith('Preferred_Foot_')]
+    
+    # Kecualikan ID unik (rk), tahun lahir (born), dan hasil kolom dummy encoding 'pos_'
+    exclude_cols = ['rk', 'born']
+    cols_to_scale = [c for c in numeric_cols if c not in exclude_cols and not c.startswith('pos_')]
     
     if cols_to_scale:
         df_clean[cols_to_scale] = scaler.fit_transform(df_clean[cols_to_scale])
         
-    print("✓ Proses preprocessing selesai.")
+    print("✓ Proses preprocessing data sepak bola selesai.")
     return df_clean
-# ...existing code...
 
 def main():
     # Menentukan jalur file secara dinamis relatif terhadap struktur folder proyek
