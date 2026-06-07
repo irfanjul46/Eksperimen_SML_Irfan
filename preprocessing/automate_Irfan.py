@@ -25,7 +25,7 @@ def preprocess_data(df):
     df_clean = df_clean.dropna(subset=required_cols)
     
     # 2. Penanganan Outlier Berbasis DataFrame (Vectorized IQR)
-    # Kita saring fitur-fitur utama agar performa model lebih stabil
+    # Kita saring fitur-fitur utama agar performa model lebih stabill
     columns_to_filter = ['age', 'goals', 'shots']
     for col in columns_to_filter:
         if col in df_clean.columns:
